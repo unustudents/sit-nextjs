@@ -68,12 +68,36 @@ export async function updatePageAction(
   _previousState: UpdatePageState | null,
   formData: FormData,
 ): Promise<UpdatePageState> {
+  const rawSocialLinks = formData.get("social_links");
+  let parsedSocialLinks: unknown = undefined;
+  if (typeof rawSocialLinks === "string" && rawSocialLinks.trim().length > 0) {
+    try {
+      parsedSocialLinks = JSON.parse(rawSocialLinks);
+    } catch {
+      return {
+        error: "Format data tautan sosial tidak valid.",
+      };
+    }
+  } else if (rawSocialLinks === "") {
+    parsedSocialLinks = [];
+  }
+
+  const rawAvatarPath = formData.get("avatar_path");
+  const avatarPath =
+    rawAvatarPath === ""
+      ? null
+      : rawAvatarPath !== null
+        ? String(rawAvatarPath)
+        : undefined;
+
   const parsed = updatePageSchema.safeParse({
     id: formData.get("id"),
     slug: formData.get("slug"),
     title: formData.get("title"),
     description: formData.get("description") || undefined,
     status: formData.get("status"),
+    avatar_path: avatarPath,
+    social_links: parsedSocialLinks,
   });
 
   if (!parsed.success) {
@@ -89,6 +113,8 @@ export async function updatePageAction(
     title: string;
     description: string;
     status: "draft" | "published" | "archived";
+    avatar_path?: string | null;
+    social_links?: NonNullable<UpdatePageInput["social_links"]>;
     published_at?: string;
   } = {
     slug: parsed.data.slug,
@@ -96,6 +122,14 @@ export async function updatePageAction(
     description: parsed.data.description ?? "",
     status: parsed.data.status,
   };
+
+  if (parsed.data.avatar_path !== undefined) {
+    updatePayload.avatar_path = parsed.data.avatar_path;
+  }
+
+  if (parsed.data.social_links !== undefined) {
+    updatePayload.social_links = parsed.data.social_links;
+  }
 
   if (parsed.data.status === "published") {
     updatePayload.published_at = new Date().toISOString();

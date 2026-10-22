@@ -29,6 +29,40 @@ export const createPageSchema = z.object({
     .optional(),
 });
 
+export const socialLinkSchema = z.object({
+  label: z
+    .string()
+    .trim()
+    .min(1, "Nama platform wajib diisi")
+    .max(50, "Nama platform maksimal 50 karakter"),
+  url: z
+    .string()
+    .trim()
+    .min(1, "URL tautan sosial wajib diisi")
+    .max(2048, "URL maksimal 2048 karakter")
+    .refine(
+      (val) => {
+        try {
+          const parsed = new URL(val);
+          return ["http:", "https:", "mailto:", "tel:"].includes(
+            parsed.protocol,
+          );
+        } catch {
+          return false;
+        }
+      },
+      {
+        message:
+          "URL harus diawali dengan http://, https://, mailto:, atau tel:",
+      },
+    ),
+  icon: z
+    .string()
+    .trim()
+    .min(1, "Ikon wajib ditentukan")
+    .max(50, "Nama ikon maksimal 50 karakter"),
+});
+
 export const updatePageSchema = z.object({
   id: z.uuid("ID halaman tidak valid"),
   slug: slugSchema,
@@ -45,7 +79,13 @@ export const updatePageSchema = z.object({
   status: z.enum(["draft", "published", "archived"], {
     message: "Status halaman tidak valid",
   }),
+  avatar_path: z.string().trim().nullable().optional(),
+  social_links: z
+    .array(socialLinkSchema)
+    .max(20, "Maksimal 20 tautan sosial yang dapat ditambahkan")
+    .optional(),
 });
 
 export type CreatePageInput = z.infer<typeof createPageSchema>;
 export type UpdatePageInput = z.infer<typeof updatePageSchema>;
+export type SocialLinkInput = z.infer<typeof socialLinkSchema>;

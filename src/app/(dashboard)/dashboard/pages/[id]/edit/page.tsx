@@ -32,7 +32,7 @@ async function PageEditContent({ params }: PageProps) {
   const { data: page, error } = await supabase
     .from("pages")
     .select(
-      "id, title, slug, description, status, admin_disabled, created_at, published_at",
+      "id, title, slug, description, avatar_path, social_links, status, admin_disabled, created_at, published_at",
     )
     .eq("id", resolvedParams.id)
     .single();
@@ -116,7 +116,7 @@ async function PageEditContent({ params }: PageProps) {
           <div className="flex gap-1 py-1">
             <span className="flex min-h-10 items-center gap-2 border-b-2 border-blue-600 px-4 text-xs font-bold text-blue-600 dark:border-blue-400 dark:text-blue-400">
               <Settings className="h-4 w-4" />
-              <span>Pengaturan & Slug</span>
+              <span>Profil & Pengaturan</span>
             </span>
 
             <span

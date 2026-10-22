@@ -33,7 +33,7 @@ async function PageEditContent({ params, searchParams }: PageProps) {
       supabase
         .from("pages")
         .select(
-          "id, title, slug, description, avatar_path, social_links, status, admin_disabled, created_at, published_at",
+          "id, title, slug, description, avatar_path, social_links, theme_config, status, admin_disabled, created_at, published_at",
         )
         .eq("id", resolvedParams.id)
         .single(),
@@ -52,7 +52,11 @@ async function PageEditContent({ params, searchParams }: PageProps) {
 
   const isLive = page.status === "published" && !page.admin_disabled;
   const initialTab =
-    resolvedSearchParams?.tab === "links" ? "links" : "profile";
+    resolvedSearchParams?.tab === "theme"
+      ? "theme"
+      : resolvedSearchParams?.tab === "links"
+        ? "links"
+        : "profile";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">

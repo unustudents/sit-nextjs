@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isReservedSlug } from "@/lib/reserved-slugs";
+import { themeConfigSchema } from "@/lib/validators/theme";
 
 export const slugSchema = z
   .string()
@@ -84,6 +85,7 @@ export const updatePageSchema = z.object({
     .array(socialLinkSchema)
     .max(20, "Maksimal 20 tautan sosial yang dapat ditambahkan")
     .optional(),
+  theme_config: themeConfigSchema.optional(),
 });
 
 export type CreatePageInput = z.infer<typeof createPageSchema>;

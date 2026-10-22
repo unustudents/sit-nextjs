@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ThemeConfig } from "@/types/database.types";
 
 const hexColorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -25,20 +26,123 @@ export const themeConfigSchema = z.object({
   animation: z.enum(["off", "subtle"]),
 });
 
-export const DEFAULT_THEME: z.infer<typeof themeConfigSchema> = {
+export const DEFAULT_THEME: ThemeConfig = {
   version: 1,
   template: "minimal",
   colors: {
-    background: "#ffffff",
-    text: "#111827",
-    button: "#111827",
-    buttonText: "#ffffff",
+    background: "#0A0E17",
+    text: "#FFFFFF",
+    button: "#2563EB",
+    buttonText: "#FFFFFF",
   },
   font: "sans",
   buttonRadius: "lg",
-  backgroundStyle: "solid",
+  backgroundStyle: "gradient",
   animation: "subtle",
 };
+
+export const THEME_PRESETS: {
+  id: string;
+  name: string;
+  description: string;
+  config: ThemeConfig;
+}[] = [
+  {
+    id: "minimalDark",
+    name: "Midnight Slate",
+    description: "Tampilan gelap modern dengan kontras tinggi dan aksen biru profesional.",
+    config: {
+      version: 1,
+      template: "minimal",
+      colors: {
+        background: "#0A0E17",
+        text: "#FFFFFF",
+        button: "#2563EB",
+        buttonText: "#FFFFFF",
+      },
+      font: "sans",
+      buttonRadius: "lg",
+      backgroundStyle: "gradient",
+      animation: "subtle",
+    },
+  },
+  {
+    id: "cleanLight",
+    name: "Clean Light",
+    description: "Tampilan terang minimalis bernuansa editorial korporat.",
+    config: {
+      version: 1,
+      template: "minimal",
+      colors: {
+        background: "#F8FAFC",
+        text: "#0F172A",
+        button: "#0F172A",
+        buttonText: "#FFFFFF",
+      },
+      font: "sans",
+      buttonRadius: "lg",
+      backgroundStyle: "solid",
+      animation: "subtle",
+    },
+  },
+  {
+    id: "radiantGlass",
+    name: "Radiant Glass",
+    description: "Efek glassmorphism transparan dengan aksen aurora indigo dan tombol pill.",
+    config: {
+      version: 1,
+      template: "glass",
+      colors: {
+        background: "#0F172A",
+        text: "#F8FAFC",
+        button: "#6366F1",
+        buttonText: "#FFFFFF",
+      },
+      font: "sans",
+      buttonRadius: "full",
+      backgroundStyle: "mesh",
+      animation: "subtle",
+    },
+  },
+  {
+    id: "neoTerminal",
+    name: "Neo Terminal",
+    description: "Nuansa developer & hacker terminal bernuansa hijau monokrom.",
+    config: {
+      version: 1,
+      template: "bold",
+      colors: {
+        background: "#121212",
+        text: "#E2E8F0",
+        button: "#10B981",
+        buttonText: "#000000",
+      },
+      font: "mono",
+      buttonRadius: "sm",
+      backgroundStyle: "solid",
+      animation: "subtle",
+    },
+  },
+  {
+    id: "sunsetGlow",
+    name: "Sunset Crimson",
+    description: "Aksen gradasi mewah bernuansa crimson dan tipografi serif anggun.",
+    config: {
+      version: 1,
+      template: "glass",
+      colors: {
+        background: "#180D26",
+        text: "#FAF5FF",
+        button: "#F43F5E",
+        buttonText: "#FFFFFF",
+      },
+      font: "serif",
+      buttonRadius: "full",
+      backgroundStyle: "gradient",
+      animation: "subtle",
+    },
+  },
+];
 
 export const socialLinkSchema = z.object({
   label: z.string().trim().min(1).max(50),

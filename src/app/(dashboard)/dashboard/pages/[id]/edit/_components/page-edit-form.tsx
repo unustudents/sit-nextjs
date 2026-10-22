@@ -23,12 +23,15 @@ import {
   type UpdatePageState,
 } from "@/app/(dashboard)/dashboard/_actions/pages";
 import type { LinkRow } from "@/app/(dashboard)/dashboard/_actions/links";
+import type { ThemeConfig } from "@/types/database.types";
+import { DEFAULT_THEME } from "@/lib/validators/theme";
 import { AvatarUploader } from "./avatar-uploader";
 import {
   SocialLinksManager,
   type SocialLinkItem,
 } from "./social-links-manager";
 import { LinksManager } from "./links-manager";
+import { ThemeEditor } from "./theme-editor";
 import { PageLivePreview, type CustomLinkItem } from "./page-live-preview";
 
 type PageEditFormProps = {
@@ -39,13 +42,14 @@ type PageEditFormProps = {
     description: string;
     avatar_path: string | null;
     social_links: SocialLinkItem[] | null;
+    theme_config?: ThemeConfig | null;
     status: "draft" | "published" | "archived";
     admin_disabled: boolean;
     created_at: string;
     published_at: string | null;
   };
   initialLinks?: LinkRow[];
-  initialTab?: "profile" | "links";
+  initialTab?: "profile" | "links" | "theme";
 };
 
 export function PageEditForm({
@@ -53,7 +57,12 @@ export function PageEditForm({
   initialLinks = [],
   initialTab = "profile",
 }: PageEditFormProps) {
-  const [activeTab, setActiveTab] = useState<"profile" | "links">(initialTab);
+  const [activeTab, setActiveTab] = useState<"profile" | "links" | "theme">(initialTab);
+  const [theme, setTheme] = useState<ThemeConfig>(
+    initialData.theme_config && initialData.theme_config.version === 1
+      ? initialData.theme_config
+      : DEFAULT_THEME,
+  );
 
   const [state, formAction, isPending] = useActionState<
     UpdatePageState | null,
@@ -142,13 +151,18 @@ export function PageEditForm({
             </span>
           </button>
 
-          <span
-            title="Akan aktif pada Langkah 8 - Desain & Tema"
-            className="flex min-h-10 cursor-not-allowed items-center gap-2 border-b-2 border-transparent px-4 text-xs font-medium text-slate-400 opacity-60 dark:text-slate-500"
+          <button
+            type="button"
+            onClick={() => setActiveTab("theme")}
+            className={`flex min-h-10 items-center gap-2 border-b-2 px-4 text-xs font-bold transition-all ${
+              activeTab === "theme"
+                ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                : "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            }`}
           >
             <Palette className="h-4 w-4" />
             <span>Tema Visual</span>
-          </span>
+          </button>
 
           <span
             title="Akan aktif pada Langkah 10 - QR & Analytics"
@@ -171,8 +185,17 @@ export function PageEditForm({
       <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
         {/* Main Editor Column */}
         <div className="space-y-8 lg:col-span-8">
-          {activeTab === "links" ? (
-            /* Links Manager Section (Day 6) */
+          {activeTab === "theme" ? (
+            /* Theme Editor Section (Day 8) */
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-7">
+              <ThemeEditor
+                pageId={initialData.id}
+                initialTheme={theme}
+                onThemeChange={(newTheme) => setTheme(newTheme)}
+              />
+            </div>
+          ) : activeTab === "links" ? (
+            /* Links Manager Section (Day 6-7) */
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-7">
               <LinksManager
                 pageId={initialData.id}
@@ -189,6 +212,11 @@ export function PageEditForm({
                 type="hidden"
                 name="social_links"
                 value={JSON.stringify(socialLinks)}
+              />
+              <input
+                type="hidden"
+                name="theme_config"
+                value={JSON.stringify(theme)}
               />
 
               {state?.success ? (
@@ -560,6 +588,7 @@ export function PageEditForm({
             }
             socialLinks={socialLinks}
             customLinks={customLinks}
+            theme={theme}
             status={status}
           />
         </div>

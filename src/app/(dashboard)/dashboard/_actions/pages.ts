@@ -91,6 +91,18 @@ export async function updatePageAction(
         ? String(rawAvatarPath)
         : undefined;
 
+  const rawThemeConfig = formData.get("theme_config");
+  let parsedThemeConfig: unknown = undefined;
+  if (typeof rawThemeConfig === "string" && rawThemeConfig.trim().length > 0) {
+    try {
+      parsedThemeConfig = JSON.parse(rawThemeConfig);
+    } catch {
+      return {
+        error: "Format data konfigurasi tema tidak valid.",
+      };
+    }
+  }
+
   const parsed = updatePageSchema.safeParse({
     id: formData.get("id"),
     slug: formData.get("slug"),
@@ -99,6 +111,7 @@ export async function updatePageAction(
     status: formData.get("status"),
     avatar_path: avatarPath,
     social_links: parsedSocialLinks,
+    theme_config: parsedThemeConfig,
   });
 
   if (!parsed.success) {
@@ -129,6 +142,7 @@ export async function updatePageAction(
     status: "draft" | "published" | "archived";
     avatar_path?: string | null;
     social_links?: NonNullable<UpdatePageInput["social_links"]>;
+    theme_config?: NonNullable<UpdatePageInput["theme_config"]>;
     published_at?: string;
   } = {
     slug: parsed.data.slug,
@@ -143,6 +157,10 @@ export async function updatePageAction(
 
   if (parsed.data.social_links !== undefined) {
     updatePayload.social_links = parsed.data.social_links;
+  }
+
+  if (parsed.data.theme_config !== undefined) {
+    updatePayload.theme_config = parsed.data.theme_config;
   }
 
   if (parsed.data.status === "published") {

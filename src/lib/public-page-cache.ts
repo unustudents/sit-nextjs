@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { PageStatus, SocialLink } from "@/types/database.types";
+import type { PageStatus, SocialLink, ThemeConfig } from "@/types/database.types";
 
 export type PublicPage = {
   id: string;
@@ -10,6 +10,7 @@ export type PublicPage = {
   description: string;
   avatar_path: string | null;
   social_links: SocialLink[];
+  theme_config?: ThemeConfig | null;
   status: PageStatus;
 };
 
@@ -37,7 +38,9 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
   const adminClient = createAdminClient();
   const { data: page, error } = await adminClient
     .from("pages")
-    .select("id, slug, title, description, avatar_path, social_links, status")
+    .select(
+      "id, slug, title, description, avatar_path, social_links, theme_config, status",
+    )
     .eq("slug", slug)
     .eq("status", "published")
     .eq("admin_disabled", false)

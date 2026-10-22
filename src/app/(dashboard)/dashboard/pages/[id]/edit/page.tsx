@@ -2,15 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import {
-  ArrowLeft,
-  BarChart3,
-  ExternalLink,
-  Layers,
-  Palette,
-  QrCode,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { connection } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { PageEditForm } from "./_components/page-edit-form";
@@ -19,33 +11,48 @@ export const instant = false;
 
 export const metadata: Metadata = {
   title: "Pengaturan Halaman — SIT",
-  description: "Kelola rincian judul, slug, dan status publikasi halaman Anda.",
+  description: "Kelola rincian judul, slug, tautan, dan status publikasi halaman Anda.",
 };
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 };
 
-async function PageEditContent({ params }: PageProps) {
+async function PageEditContent({ params, searchParams }: PageProps) {
   await connection();
-  const [{ supabase }, resolvedParams] = await Promise.all([
+  const [userResult, resolvedParams, resolvedSearchParams] = await Promise.all([
     requireUser(),
     params,
+    searchParams ?? Promise.resolve({ tab: "profile" }),
   ]);
+  const { supabase } = userResult;
 
-  const { data: page, error } = await supabase
-    .from("pages")
-    .select(
-      "id, title, slug, description, avatar_path, social_links, status, admin_disabled, created_at, published_at",
-    )
-    .eq("id", resolvedParams.id)
-    .single();
+  const [{ data: page, error: pageError }, { data: links }] =
+    await Promise.all([
+      supabase
+        .from("pages")
+        .select(
+          "id, title, slug, description, avatar_path, social_links, status, admin_disabled, created_at, published_at",
+        )
+        .eq("id", resolvedParams.id)
+        .single(),
+      supabase
+        .from("links")
+        .select(
+          "id, page_id, title, url, icon, sort_order, is_active, created_at, updated_at",
+        )
+        .eq("page_id", resolvedParams.id)
+        .order("sort_order", { ascending: true }),
+    ]);
 
-  if (error || !page) {
+  if (pageError || !page) {
     notFound();
   }
 
   const isLive = page.status === "published" && !page.admin_disabled;
+  const initialTab =
+    resolvedSearchParams?.tab === "links" ? "links" : "profile";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
@@ -115,49 +122,11 @@ async function PageEditContent({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Feature Navigation Tabs */}
-        <div className="mb-8 flex overflow-x-auto border-b border-slate-200 dark:border-slate-800">
-          <div className="flex gap-1 py-1">
-            <span className="flex min-h-10 items-center gap-2 border-b-2 border-blue-600 px-4 text-xs font-bold text-blue-600 dark:border-blue-400 dark:text-blue-400">
-              <Settings className="h-4 w-4" />
-              <span>Profil & Pengaturan</span>
-            </span>
-
-            <span
-              title="Akan aktif pada tahapan berikutnya"
-              className="flex min-h-10 cursor-not-allowed items-center gap-2 border-b-2 border-transparent px-4 text-xs font-medium text-slate-400 opacity-60 dark:text-slate-500"
-            >
-              <Layers className="h-4 w-4" />
-              <span>Tautan (Links)</span>
-            </span>
-
-            <span
-              title="Akan aktif pada tahapan berikutnya"
-              className="flex min-h-10 cursor-not-allowed items-center gap-2 border-b-2 border-transparent px-4 text-xs font-medium text-slate-400 opacity-60 dark:text-slate-500"
-            >
-              <Palette className="h-4 w-4" />
-              <span>Tema Visual</span>
-            </span>
-
-            <span
-              title="Akan aktif pada tahapan berikutnya"
-              className="flex min-h-10 cursor-not-allowed items-center gap-2 border-b-2 border-transparent px-4 text-xs font-medium text-slate-400 opacity-60 dark:text-slate-500"
-            >
-              <QrCode className="h-4 w-4" />
-              <span>QR Code</span>
-            </span>
-
-            <span
-              title="Akan aktif pada tahapan berikutnya"
-              className="flex min-h-10 cursor-not-allowed items-center gap-2 border-b-2 border-transparent px-4 text-xs font-medium text-slate-400 opacity-60 dark:text-slate-500"
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Statistik</span>
-            </span>
-          </div>
-        </div>
-
-        <PageEditForm initialData={page} />
+        <PageEditForm
+          initialData={page}
+          initialLinks={links ?? []}
+          initialTab={initialTab}
+        />
       </main>
     </div>
   );

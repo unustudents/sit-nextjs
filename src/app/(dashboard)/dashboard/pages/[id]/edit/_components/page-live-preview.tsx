@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { Camera, ChevronRight, Share2, Sparkles } from "lucide-react";
+import {
+  Camera,
+  ChevronRight,
+  ExternalLink,
+  Link as LinkIcon,
+  Share2,
+  Sparkles,
+} from "lucide-react";
 import {
   SocialIcon,
   getSocialPlatform,
@@ -9,12 +16,22 @@ import {
 } from "@/components/ui/social-icons";
 import type { SocialLinkItem } from "./social-links-manager";
 
+export type CustomLinkItem = {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string | null;
+  sort_order?: number;
+  is_active: boolean;
+};
+
 type PageLivePreviewProps = {
   title: string;
   slug: string;
   description: string;
   avatarUrl: string | null;
   socialLinks: SocialLinkItem[];
+  customLinks?: CustomLinkItem[];
   status: "draft" | "published" | "archived";
 };
 
@@ -24,6 +41,7 @@ export function PageLivePreview({
   description,
   avatarUrl,
   socialLinks,
+  customLinks = [],
   status,
 }: PageLivePreviewProps) {
   const getInitials = (text: string) => {
@@ -34,6 +52,9 @@ export function PageLivePreview({
       .map((w) => w[0]?.toUpperCase() || "")
       .join("");
   };
+
+  const activeCustomLinks = customLinks.filter((l) => l.is_active);
+  const hasAnyLinks = socialLinks.length > 0 || activeCustomLinks.length > 0;
 
   return (
     <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm dark:border-slate-800 dark:from-slate-900/60 dark:to-slate-950 sm:p-5">
@@ -144,45 +165,78 @@ export function PageLivePreview({
 
         {/* Linktree style full button cards */}
         <div className="mt-5 space-y-2.5">
-          {socialLinks.length > 0 ? (
-            socialLinks.map((link, idx) => {
-              const platform = getSocialPlatform(link.icon);
-              const subtitle = formatSocialSubtitle(
-                platform?.id || link.icon,
-                link.url,
-              );
+          {/* 1. Social Links as full cards */}
+          {socialLinks.map((link, idx) => {
+            const platform = getSocialPlatform(link.icon);
+            const subtitle = formatSocialSubtitle(
+              platform?.id || link.icon,
+              link.url,
+            );
 
-              return (
-                <div
-                  key={`preview-card-${link.icon}-${idx}`}
-                  className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] p-2.5 shadow-sm backdrop-blur-md"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-xs ${
-                        platform?.badgeBg || "bg-blue-600 text-white"
-                      }`}
-                    >
-                      <SocialIcon icon={link.icon} className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <p className="truncate text-xs font-bold text-white">
-                        {link.label}
-                      </p>
-                      <p className="truncate text-[10px] text-slate-400">
-                        {subtitle || link.url || platform?.defaultSubtitle}
-                      </p>
-                    </div>
+            return (
+              <div
+                key={`preview-social-${link.icon}-${idx}`}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] p-2.5 shadow-sm backdrop-blur-md"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-xs ${
+                      platform?.badgeBg || "bg-blue-600 text-white"
+                    }`}
+                  >
+                    <SocialIcon icon={link.icon} className="h-4 w-4" />
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-xs font-bold text-white">
+                      {link.label}
+                    </p>
+                    <p className="truncate text-[10px] text-slate-400">
+                      {subtitle || link.url || platform?.defaultSubtitle}
+                    </p>
+                  </div>
                 </div>
-              );
-            })
-          ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              </div>
+            );
+          })}
+
+          {/* 2. Custom Links from links table */}
+          {activeCustomLinks.map((link) => {
+            let host = "";
+            try {
+              host = new URL(link.url).hostname.replace(/^www\./, "");
+            } catch {
+              host = link.url;
+            }
+
+            return (
+              <div
+                key={`preview-custom-${link.id}`}
+                className="flex items-center justify-between rounded-xl border border-blue-500/20 bg-blue-950/20 p-2.5 shadow-sm backdrop-blur-md"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
+                    <LinkIcon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-xs font-bold text-white">
+                      {link.title}
+                    </p>
+                    <p className="truncate text-[10px] text-blue-300/80 font-mono">
+                      {host}
+                    </p>
+                  </div>
+                </div>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-blue-300/60" />
+              </div>
+            );
+          })}
+
+          {!hasAnyLinks ? (
             <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-400">
               Belum ada tautan yang ditambahkan
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Mini SIT Branding */}

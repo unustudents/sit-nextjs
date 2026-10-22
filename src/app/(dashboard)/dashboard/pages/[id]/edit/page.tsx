@@ -6,12 +6,14 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { connection } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { PageEditForm } from "./_components/page-edit-form";
+import { PageSubNav } from "../_components/page-sub-nav";
 
 export const instant = false;
 
 export const metadata: Metadata = {
   title: "Pengaturan Halaman — SIT",
-  description: "Kelola rincian judul, slug, tautan, dan status publikasi halaman Anda.",
+  description:
+    "Kelola rincian judul, slug, tautan, dan status publikasi halaman Anda.",
 };
 
 type PageProps = {
@@ -28,8 +30,8 @@ async function PageEditContent({ params, searchParams }: PageProps) {
   ]);
   const { supabase } = userResult;
 
-  const [{ data: page, error: pageError }, { data: links }] =
-    await Promise.all([
+  const [{ data: page, error: pageError }, { data: links }] = await Promise.all(
+    [
       supabase
         .from("pages")
         .select(
@@ -44,7 +46,8 @@ async function PageEditContent({ params, searchParams }: PageProps) {
         )
         .eq("page_id", resolvedParams.id)
         .order("sort_order", { ascending: true }),
-    ]);
+    ],
+  );
 
   if (pageError || !page) {
     notFound();
@@ -125,6 +128,8 @@ async function PageEditContent({ params, searchParams }: PageProps) {
             </p>
           </div>
         </div>
+
+        <PageSubNav pageId={page.id} activeTab="edit" />
 
         <PageEditForm
           initialData={page}

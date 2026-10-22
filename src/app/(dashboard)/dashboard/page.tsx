@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowUpRight,
+  BarChart3,
   ExternalLink,
+  Eye,
   LayoutGrid,
   LogOut,
+  MousePointerClick,
   Plus,
+  QrCode,
   Settings,
   UserRound,
 } from "lucide-react";
 import { Suspense } from "react";
 import { logoutAction } from "@/app/(auth)/login/_actions/auth";
 import { requireUser } from "@/lib/auth/require-user";
+import { getPagesAnalyticsSummary } from "@/lib/analytics";
 import { PageCreateForm } from "./_components/page-create-form";
 
 export const metadata: Metadata = {
@@ -60,6 +65,9 @@ async function DashboardContent({ searchParams }: DashboardPageProps) {
     params.deleted === "true" ||
     (Array.isArray(params.deleted) && params.deleted[0] === "true");
   const pageRows = pages ?? [];
+  const statsSummary = await getPagesAnalyticsSummary(
+    pageRows.map((p) => p.id),
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
@@ -215,13 +223,17 @@ async function DashboardContent({ searchParams }: DashboardPageProps) {
                   }).format(new Date(page.created_at));
                   const isAvailable =
                     page.status === "published" && !page.admin_disabled;
+                  const stats = statsSummary[page.id] ?? {
+                    views: 0,
+                    clicks: 0,
+                  };
 
                   return (
                     <article
                       key={page.id}
                       className="group rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200 hover:shadow-sm dark:border-slate-800 dark:hover:border-blue-900 sm:p-5"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <Link
@@ -239,11 +251,39 @@ async function DashboardContent({ searchParams }: DashboardPageProps) {
                           <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
                             /{page.slug}
                           </p>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/10 dark:bg-blue-950/40 dark:text-blue-300">
+                              <Eye className="h-3 w-3" />
+                              {stats.views} views
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/10 dark:bg-amber-950/40 dark:text-amber-300">
+                              <MousePointerClick className="h-3 w-3" />
+                              {stats.clicks} clicks
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <Link
+                            href={`/dashboard/pages/${page.id}/analytics`}
+                            title="Lihat Statistik"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            <span className="hidden sm:inline">Statistik</span>
+                          </Link>
+                          <Link
+                            href={`/dashboard/pages/${page.id}/qr`}
+                            title="Lihat QR Code"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                          >
+                            <QrCode className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                            <span className="hidden sm:inline">QR</span>
+                          </Link>
                           <Link
                             href={`/dashboard/pages/${page.id}/edit`}
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                           >
                             <Settings className="h-3.5 w-3.5" />
                             <span>Kelola</span>

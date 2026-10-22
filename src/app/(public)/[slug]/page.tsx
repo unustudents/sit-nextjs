@@ -8,7 +8,6 @@ import {
   ChevronRight,
   ExternalLink,
   Link as LinkIcon,
-  ShieldAlert,
   Sparkles,
 } from "lucide-react";
 import { getPublicLinks, getPublicPage } from "@/lib/public-page-cache";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/social-icons";
 import type { SocialLink } from "@/types/database.types";
 import { PublicShareButton } from "./_components/public-share-button";
+import { PageViewTracker } from "./_components/page-view-tracker";
 
 type PublicPageProps = {
   params: Promise<{ slug: string }>;
@@ -32,42 +32,69 @@ export async function generateMetadata({
   const { slug } = await params;
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) {
-    return { title: "Halaman Tidak Ditemukan — SIT" };
+    return {
+      title: "Halaman Tidak Ditemukan — SIT",
+      robots: { index: false, follow: false },
+    };
   }
 
   const page = await getPublicPage(slug);
 
   if (!page) {
-    return { title: "Halaman Tidak Ditemukan — SIT" };
+    return {
+      title: "Halaman Tidak Ditemukan — SIT",
+      robots: { index: false, follow: false },
+    };
   }
+
+  const pageDescription =
+    page.description || `Kumpulan tautan dan profil resmi dari ${page.title}.`;
+  const canonicalUrl = `/${page.slug}`;
+  const avatarUrl = page.avatar_path
+    ? `/api/assets/pages/${page.id}?v=${encodeURIComponent(page.avatar_path)}`
+    : undefined;
 
   return {
     title: `${page.title} — SIT`,
-    description:
-      page.description ||
-      `Kumpulan tautan dan profil resmi dari ${page.title}.`,
+    description: pageDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
     openGraph: {
-      title: page.title,
-      description:
-        page.description ||
-        `Kumpulan tautan dan profil resmi dari ${page.title}.`,
+      title: `${page.title} — SIT`,
+      description: pageDescription,
+      url: canonicalUrl,
+      siteName: "SIT",
+      type: "profile",
+      images: avatarUrl
+        ? [
+            {
+              url: avatarUrl,
+              width: 512,
+              height: 512,
+              alt: `Avatar ${page.title}`,
+            },
+          ]
+        : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: `${page.title} — SIT`,
+      description: pageDescription,
+      images: avatarUrl ? [avatarUrl] : undefined,
     },
   };
 }
 
-async function PublicPageContent({ params }: PublicPageProps) {
-  const { slug } = await params;
-
-  const parsedSlug = slugSchema.safeParse(slug);
-  if (!parsedSlug.success) {
-    notFound();
-  }
-
-  const page = await getPublicPage(slug);
-  if (!page) {
-    notFound();
-  }
-
+async function PublicPageContent({
+  page,
+}: {
+  page: NonNullable<Awaited<ReturnType<typeof getPublicPage>>>;
+}) {
   const customLinks = await getPublicLinks(page.id);
 
   const socialLinks = (
@@ -132,20 +159,8 @@ async function PublicPageContent({ params }: PublicPageProps) {
         <div className="pointer-events-none fixed inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/30" />
       ) : null}
 
-      {page.status !== "published" ? (
-        <aside
-          aria-label="Informasi Pratinjau"
-          className="relative z-20 border-b border-amber-500/30 bg-amber-950/70 px-4 py-2 text-center text-xs font-semibold text-amber-200 backdrop-blur-md"
-        >
-          <div className="mx-auto flex max-w-md items-center justify-center gap-2">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-400" />
-            <span>
-              Mode Pratinjau Pemilik — Status halaman:{" "}
-              <strong className="uppercase">{page.status}</strong>
-            </span>
-          </div>
-        </aside>
-      ) : null}
+      {/* Non-blocking Page View Analytics Tracker (FR-023 & NFR-015) */}
+      <PageViewTracker pageId={page.id} />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-between px-4 py-6 sm:px-6 sm:py-8">
         {/* Top Header Bar */}
@@ -199,7 +214,10 @@ async function PublicPageContent({ params }: PublicPageProps) {
 
           {/* Page Title & Verified Badge */}
           <div className="flex items-center justify-center gap-1.5">
-            <h1 className="text-xl font-bold tracking-tight text-current sm:text-2xl">
+            <h1
+              id="public-profile-title"
+              className="text-xl font-bold tracking-tight text-current break-words sm:text-2xl"
+            >
               {page.title}
             </h1>
             <span
@@ -224,24 +242,31 @@ async function PublicPageContent({ params }: PublicPageProps) {
 
           {/* Description / Bio */}
           {page.description ? (
-            <p className="mt-2 max-w-sm text-xs leading-relaxed opacity-80 sm:text-sm">
+            <p
+              id="public-profile-bio"
+              className="mt-2 max-w-sm text-xs leading-relaxed opacity-80 break-words sm:text-sm"
+            >
               {page.description}
             </p>
           ) : null}
 
           {/* Social Icons Bar (Circle icons) */}
           {socialLinks.length > 0 ? (
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <div
+              id="public-social-icons-bar"
+              className="mt-4 flex flex-wrap justify-center gap-2"
+            >
               {socialLinks.map((item, idx) => (
                 <a
                   key={`social-circle-${item.icon}-${idx}`}
+                  id={`public-social-circle-${item.icon}-${idx}`}
                   href={item.url}
                   target="_blank"
                   rel="noreferrer noopener"
                   aria-label={item.label}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border border-current/15 bg-current/[0.06] text-current shadow-sm backdrop-blur-md ${
                     isAnimated
-                      ? "transition-all duration-200 hover:scale-110 hover:bg-current/[0.12]"
+                      ? "transition-all duration-200 hover:scale-110 hover:bg-current/[0.12] motion-reduce:transition-none motion-reduce:transform-none"
                       : ""
                   }`}
                   title={item.label}
@@ -254,7 +279,7 @@ async function PublicPageContent({ params }: PublicPageProps) {
         </header>
 
         {/* Links Stack Area */}
-        <main className="my-6 space-y-3">
+        <main id="public-links-container" className="my-6 space-y-3">
           {/* Social Links rendered as full Linktree cards */}
           {socialLinks.map((item, idx) => {
             const platform = getSocialPlatform(item.icon);
@@ -266,6 +291,7 @@ async function PublicPageContent({ params }: PublicPageProps) {
             return (
               <a
                 key={`social-card-${item.icon}-${idx}`}
+                id={`public-social-card-${item.icon}-${idx}`}
                 href={item.url}
                 target="_blank"
                 rel="noreferrer noopener"
@@ -275,14 +301,16 @@ async function PublicPageContent({ params }: PublicPageProps) {
                     : "bg-current/[0.06]"
                 } ${
                   isAnimated
-                    ? "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
+                    ? "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99] motion-reduce:transition-none motion-reduce:transform-none"
                     : ""
                 } sm:p-4`}
               >
                 <div className="flex min-w-0 items-center gap-3.5">
                   <div
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-md ${
-                      isAnimated ? "transition group-hover:scale-105" : ""
+                      isAnimated
+                        ? "transition group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+                        : ""
                     } ${platform?.badgeBg || "bg-blue-600 text-white"}`}
                   >
                     <SocialIcon icon={item.icon} className="h-5 w-5" />
@@ -302,7 +330,7 @@ async function PublicPageContent({ params }: PublicPageProps) {
                   <ChevronRight
                     className={`h-4 w-4 ${
                       isAnimated
-                        ? "transition group-hover:translate-x-1 group-hover:opacity-100"
+                        ? "transition group-hover:translate-x-1 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:transform-none"
                         : ""
                     }`}
                   />
@@ -316,12 +344,13 @@ async function PublicPageContent({ params }: PublicPageProps) {
             ? customLinks.map((link) => (
                 <a
                   key={link.id}
+                  id={`public-link-${link.id}`}
                   href={`/api/click/${link.id}`}
                   target="_blank"
                   rel="noreferrer noopener"
                   className={`group flex w-full items-center justify-between gap-3.5 p-3.5 shadow-lg ${radiusClass} ${
                     isAnimated
-                      ? "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.99]"
+                      ? "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.99] motion-reduce:transition-none motion-reduce:transform-none"
                       : ""
                   } sm:p-4`}
                   style={{
@@ -332,7 +361,9 @@ async function PublicPageContent({ params }: PublicPageProps) {
                   <div className="flex min-w-0 items-center gap-3.5">
                     <div
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/15 text-current shadow-md ${
-                        isAnimated ? "transition group-hover:scale-105" : ""
+                        isAnimated
+                          ? "transition group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+                          : ""
                       }`}
                     >
                       <LinkIcon className="h-5 w-5" />
@@ -352,7 +383,7 @@ async function PublicPageContent({ params }: PublicPageProps) {
                     <ExternalLink
                       className={`h-4 w-4 ${
                         isAnimated
-                          ? "transition group-hover:translate-x-1 group-hover:opacity-100"
+                          ? "transition group-hover:translate-x-1 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:transform-none"
                           : ""
                       }`}
                     />
@@ -363,6 +394,7 @@ async function PublicPageContent({ params }: PublicPageProps) {
 
           {!hasAnyLinks ? (
             <div
+              id="public-empty-links-state"
               className={`border border-dashed border-current/20 p-8 text-center backdrop-blur-md ${radiusClass}`}
             >
               <Sparkles className="mx-auto h-6 w-6 opacity-60" />
@@ -378,11 +410,16 @@ async function PublicPageContent({ params }: PublicPageProps) {
         </main>
 
         {/* Footer Branding */}
-        <footer className="mt-auto border-t border-current/15 pt-6 text-center">
+        <footer
+          id="public-brand-footer"
+          className="mt-auto border-t border-current/15 pt-6 text-center"
+        >
           <Link
             href="/"
             className={`inline-flex items-center gap-1.5 font-mono text-xs opacity-60 ${
-              isAnimated ? "transition hover:opacity-100" : ""
+              isAnimated
+                ? "transition hover:opacity-100 motion-reduce:transition-none motion-reduce:transform-none"
+                : ""
             }`}
           >
             <span>Dibuat dengan</span>
@@ -395,7 +432,19 @@ async function PublicPageContent({ params }: PublicPageProps) {
   );
 }
 
-export default function PublicPage(props: PublicPageProps) {
+export default async function PublicPage({ params }: PublicPageProps) {
+  const { slug } = await params;
+
+  const parsedSlug = slugSchema.safeParse(slug);
+  if (!parsedSlug.success) {
+    notFound();
+  }
+
+  const page = await getPublicPage(slug);
+  if (!page) {
+    notFound();
+  }
+
   return (
     <Suspense
       fallback={
@@ -412,7 +461,7 @@ export default function PublicPage(props: PublicPageProps) {
         </div>
       }
     >
-      <PublicPageContent {...props} />
+      <PublicPageContent page={page} />
     </Suspense>
   );
 }

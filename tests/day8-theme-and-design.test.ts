@@ -84,15 +84,15 @@ describe("Day 8: Visual Themes & Customization (FR-017, FR-018, FR-019)", () => 
 
   describe("FR-017: Pre-configured Curated Theme Presets", () => {
     it("provides at least 3 distinct ready-to-use presets (FR-017 requirement)", () => {
-      expect(THEME_PRESETS.length).toBeGreaterThanOrEqual(3);
+      expect(THEME_PRESETS.length >= 3).toBe(true);
     });
 
     it("verifies all curated presets conform strictly to themeConfigSchema", () => {
       for (const preset of THEME_PRESETS) {
         const res = themeConfigSchema.safeParse(preset.config);
         expect(res.success).toBe(true);
-        expect(preset.name.length).toBeGreaterThan(0);
-        expect(preset.description.length).toBeGreaterThan(0);
+        expect(preset.name.length > 0).toBe(true);
+        expect(preset.description.length > 0).toBe(true);
       }
     });
 

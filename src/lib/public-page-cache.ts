@@ -1,7 +1,11 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { PageStatus, SocialLink, ThemeConfig } from "@/types/database.types";
+import type {
+  PageStatus,
+  SocialLink,
+  ThemeConfig,
+} from "@/types/database.types";
 
 export type PublicPage = {
   id: string;
@@ -22,13 +26,8 @@ export type PublicLink = {
   sort_order: number;
 };
 
-export function publicPageTag(pageId: string) {
-  return `public-page:${pageId}`;
-}
-
-export function publicPageSlugTag(slug: string) {
-  return `public-page-slug:${slug}`;
-}
+import { publicPageSlugTag, publicPageTag } from "@/lib/public-page-tags";
+export { publicPageSlugTag, publicPageTag };
 
 export async function getPublicPage(slug: string): Promise<PublicPage | null> {
   "use cache";

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { z } from "zod";
+import { flattenError, z } from "zod";
 
 const loginSchema = z.object({
   email: z.email("Format email tidak valid").trim(),
@@ -31,7 +31,7 @@ export async function loginAction(
   const parsed = loginSchema.safeParse(rawData);
   if (!parsed.success) {
     return {
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      fieldErrors: flattenError(parsed.error).fieldErrors,
     };
   }
 

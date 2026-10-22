@@ -11,8 +11,11 @@ import {
   QrCode,
   Settings,
 } from "lucide-react";
+import { connection } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { PageEditForm } from "./_components/page-edit-form";
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Pengaturan Halaman — SIT",
@@ -24,6 +27,7 @@ type PageProps = {
 };
 
 async function PageEditContent({ params }: PageProps) {
+  await connection();
   const [{ supabase }, resolvedParams] = await Promise.all([
     requireUser(),
     params,

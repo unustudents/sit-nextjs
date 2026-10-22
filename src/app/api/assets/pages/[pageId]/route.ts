@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { requireUser } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePublicPageFromRouteHandler } from "@/lib/public-page-revalidation";
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB per NFR-006
 
@@ -231,7 +232,10 @@ export async function POST(
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/pages/${pageId}/edit`);
-  revalidatePath(`/${page.slug}`);
+  revalidatePublicPageFromRouteHandler({
+    pageId: page.id,
+    newSlug: page.slug,
+  });
 
   return NextResponse.json(
     {
@@ -389,7 +393,10 @@ export async function DELETE(
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/pages/${pageId}/edit`);
-  revalidatePath(`/${page.slug}`);
+  revalidatePublicPageFromRouteHandler({
+    pageId: page.id,
+    newSlug: page.slug,
+  });
 
   return NextResponse.json({ data: { success: true } });
 }

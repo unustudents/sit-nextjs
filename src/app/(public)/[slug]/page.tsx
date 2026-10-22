@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,8 +11,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getPublicLinks, getPublicPage } from "@/lib/public-page-cache";
 import { slugSchema } from "@/lib/validators/page";
 import {
   SocialIcon,
@@ -34,12 +34,7 @@ export async function generateMetadata({
     return { title: "Halaman Tidak Ditemukan — SIT" };
   }
 
-  const adminClient = createAdminClient();
-  const { data: page } = await adminClient
-    .from("pages")
-    .select("title, description")
-    .eq("slug", slug)
-    .single();
+  const page = await getPublicPage(slug);
 
   if (!page) {
     return { title: "Halaman Tidak Ditemukan — SIT" };
@@ -52,7 +47,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublicPage({ params }: PublicPageProps) {
+async function PublicPageContent({ params }: PublicPageProps) {
   const { slug } = await params;
 
   const parsedSlug = slugSchema.safeParse(slug);
@@ -60,54 +55,12 @@ export default async function PublicPage({ params }: PublicPageProps) {
     notFound();
   }
 
-  const adminClient = createAdminClient();
-  const { data: page, error } = await adminClient
-    .from("pages")
-    .select(
-      "id, slug, title, description, avatar_path, social_links, theme_config, status, admin_disabled, owner_id",
-    )
-    .eq("slug", slug)
-    .single();
-
-  if (error || !page || page.admin_disabled) {
+  const page = await getPublicPage(slug);
+  if (!page) {
     notFound();
   }
 
-  const isPublished = page.status === "published";
-  let isOwnerOrAdmin = false;
-
-  if (!isPublished) {
-    try {
-      const userSupabase = await createClient();
-      const { data: claimsData } = await userSupabase.auth.getClaims();
-      const currentUserId = claimsData?.claims?.sub;
-
-      if (currentUserId) {
-        const { data: profile } = await userSupabase
-          .from("profiles")
-          .select("role, is_active")
-          .eq("id", currentUserId)
-          .single();
-
-        isOwnerOrAdmin =
-          page.owner_id === currentUserId ||
-          (profile?.role === "admin" && !!profile?.is_active);
-      }
-    } catch {
-      isOwnerOrAdmin = false;
-    }
-
-    if (!isOwnerOrAdmin) {
-      notFound();
-    }
-  }
-
-  const { data: customLinks } = await adminClient
-    .from("links")
-    .select("id, title, url, icon, sort_order")
-    .eq("page_id", page.id)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+  const customLinks = await getPublicLinks(page.id);
 
   const socialLinks = (
     Array.isArray(page.social_links) ? page.social_links : []
@@ -122,8 +75,7 @@ export default async function PublicPage({ params }: PublicPageProps) {
       .join("");
   };
 
-  const hasAnyLinks =
-    socialLinks.length > 0 || (customLinks && customLinks.length > 0);
+  const hasAnyLinks = socialLinks.length > 0 || customLinks.length > 0;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#0A0E17] text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
@@ -134,7 +86,7 @@ export default async function PublicPage({ params }: PublicPageProps) {
         <div className="absolute bottom-20 -left-32 h-80 w-80 rounded-full bg-cyan-600/15 blur-3xl" />
       </div>
 
-      {!isPublished ? (
+      {page.status !== "published" ? (
         <aside
           aria-label="Informasi Pratinjau"
           className="relative z-20 border-b border-amber-500/30 bg-amber-950/70 px-4 py-2 text-center text-xs font-semibold text-amber-200 backdrop-blur-md"
@@ -288,7 +240,7 @@ export default async function PublicPage({ params }: PublicPageProps) {
           })}
 
           {/* Custom Links from links table */}
-          {customLinks && customLinks.length > 0
+          {customLinks.length > 0
             ? customLinks.map((link) => (
                 <a
                   key={link.id}
@@ -347,5 +299,35 @@ export default async function PublicPage({ params }: PublicPageProps) {
         </footer>
       </div>
     </div>
+  );
+}
+
+function PublicPageSkeleton() {
+  return (
+    <div className="relative min-h-screen bg-[#0A0E17] px-4 py-8 text-white">
+      <div className="mx-auto max-w-lg space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-6 w-24 animate-pulse rounded-full bg-white/10" />
+          <div className="h-8 w-20 animate-pulse rounded-full bg-white/10" />
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-24 w-24 animate-pulse rounded-full bg-white/10" />
+          <div className="h-6 w-36 animate-pulse rounded-lg bg-white/10" />
+          <div className="h-4 w-48 animate-pulse rounded-lg bg-white/5" />
+        </div>
+        <div className="mt-8 space-y-3">
+          <div className="h-16 w-full animate-pulse rounded-2xl bg-white/[0.06]" />
+          <div className="h-16 w-full animate-pulse rounded-2xl bg-white/[0.06]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PublicPage(props: PublicPageProps) {
+  return (
+    <Suspense fallback={<PublicPageSkeleton />}>
+      <PublicPageContent {...props} />
+    </Suspense>
   );
 }

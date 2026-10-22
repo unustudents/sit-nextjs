@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
-import { z } from "zod";
+import { revalidatePublicPageFromAction } from "@/lib/public-page-revalidation";
+import { flattenError, z } from "zod";
 import {
   createPageSchema,
   type CreatePageInput,
@@ -28,7 +29,7 @@ export async function createPageAction(
 
   if (!parsed.success) {
     return {
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      fieldErrors: flattenError(parsed.error).fieldErrors,
     };
   }
 
@@ -102,11 +103,24 @@ export async function updatePageAction(
 
   if (!parsed.success) {
     return {
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      fieldErrors: flattenError(parsed.error).fieldErrors,
     };
   }
 
   const { userId, supabase } = await requireUser();
+
+  const { data: existingPage, error: existingPageError } = await supabase
+    .from("pages")
+    .select("slug")
+    .eq("id", parsed.data.id)
+    .eq("owner_id", userId)
+    .single();
+
+  if (existingPageError || !existingPage) {
+    return {
+      error: "Halaman tidak ditemukan atau Anda tidak memiliki akses.",
+    };
+  }
 
   const updatePayload: {
     slug: string;
@@ -155,7 +169,11 @@ export async function updatePageAction(
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/pages/${parsed.data.id}/edit`);
-  revalidatePath(`/${parsed.data.slug}`);
+  revalidatePublicPageFromAction({
+    pageId: data.id,
+    oldSlug: existingPage.slug,
+    newSlug: data.slug,
+  });
 
   return {
     success: "Pengaturan halaman berhasil diperbarui.",
@@ -172,6 +190,17 @@ export async function deletePageAction(formData: FormData): Promise<void> {
 
   const { userId, supabase } = await requireUser();
 
+  const { data: existingPage, error: existingPageError } = await supabase
+    .from("pages")
+    .select("id, slug")
+    .eq("id", parsed.data)
+    .eq("owner_id", userId)
+    .single();
+
+  if (existingPageError || !existingPage) {
+    throw new Error("Halaman tidak ditemukan atau Anda tidak memiliki akses");
+  }
+
   const { error } = await supabase
     .from("pages")
     .delete()
@@ -183,5 +212,9 @@ export async function deletePageAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/dashboard");
+  revalidatePublicPageFromAction({
+    pageId: existingPage.id,
+    oldSlug: existingPage.slug,
+  });
   redirect("/dashboard?deleted=true");
 }
